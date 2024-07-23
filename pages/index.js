@@ -1,117 +1,167 @@
-import {useState, useEffect} from "react";
-import {ethers} from "ethers";
-import atm_abi from "../artifacts/contracts/Assessment.sol/Assessment.json";
+import { useState, useEffect } from "react";
+import { ethers } from "ethers";
+import simpleContractABI from "../artifacts/contracts/Assessment.sol/SimpleContract.json";
 
 export default function HomePage() {
   const [ethWallet, setEthWallet] = useState(undefined);
   const [account, setAccount] = useState(undefined);
-  const [atm, setATM] = useState(undefined);
-  const [balance, setBalance] = useState(undefined);
+  const [contract, setContract] = useState(undefined);
+  const [counter, setCounter] = useState(undefined);
+  const [message, setMessage] = useState("");
+  const [newMessage, setNewMessage] = useState("");
 
+  // Replace this with your actual deployed contract address
   const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-  const atmABI = atm_abi.abi;
+  const contractABI = simpleContractABI.abi;
 
-  const getWallet = async() => {
+  const getWallet = async () => {
     if (window.ethereum) {
       setEthWallet(window.ethereum);
     }
 
     if (ethWallet) {
-      const account = await ethWallet.request({method: "eth_accounts"});
-      handleAccount(account);
+      const accounts = await ethWallet.request({ method: "eth_accounts" });
+      handleAccount(accounts);
     }
-  }
+  };
 
-  const handleAccount = (account) => {
-    if (account) {
-      console.log ("Account connected: ", account);
-      setAccount(account);
+  const handleAccount = (accounts) => {
+    if (accounts && accounts.length > 0) {
+      setAccount(accounts[0]);
     }
-    else {
-      console.log("No account found");
-    }
-  }
+  };
 
-  const connectAccount = async() => {
+  const connectAccount = async () => {
     if (!ethWallet) {
       alert('MetaMask wallet is required to connect');
       return;
     }
-  
+
     const accounts = await ethWallet.request({ method: 'eth_requestAccounts' });
     handleAccount(accounts);
     
-    // once wallet is set we can get a reference to our deployed contract
-    getATMContract();
+    // Initialize contract
+    getContract();
   };
 
-  const getATMContract = () => {
+  const getContract = () => {
     const provider = new ethers.providers.Web3Provider(ethWallet);
     const signer = provider.getSigner();
-    const atmContract = new ethers.Contract(contractAddress, atmABI, signer);
- 
-    setATM(atmContract);
-  }
+    const simpleContract = new ethers.Contract(contractAddress, contractABI, signer);
 
-  const getBalance = async() => {
-    if (atm) {
-      setBalance((await atm.getBalance()).toNumber());
+    setContract(simpleContract);
+  };
+
+  const fetchCounter = async () => {
+    if (contract) {
+      try {
+        const counterValue = await contract.getCounter();
+        setCounter(counterValue.toString());
+      } catch (error) {
+        console.error("Error fetching counter:", error);
+      }
     }
-  }
+  };
 
-  const deposit = async() => {
-    if (atm) {
-      let tx = await atm.deposit(1);
-      await tx.wait()
-      getBalance();
+  const fetchMessage = async () => {
+    if (contract) {
+      try {
+        const messageValue = await contract.getMessage();
+        setMessage(messageValue);
+      } catch (error) {
+        console.error("Error fetching message:", error);
+      }
     }
-  }
+  };
 
-  const withdraw = async() => {
-    if (atm) {
-      let tx = await atm.withdraw(1);
-      await tx.wait()
-      getBalance();
+  const incrementCounter = async () => {
+    if (contract) {
+      try {
+        const tx = await contract.incrementCounter();
+        await tx.wait();
+        fetchCounter();
+      } catch (error) {
+        console.error("Error incrementing counter:", error);
+      }
     }
-  }
+  };
 
-  const initUser = () => {
-    // Check to see if user has Metamask
-    if (!ethWallet) {
-      return <p>Please install Metamask in order to use this ATM.</p>
+  const decrementCounter = async () => {
+    if (contract) {
+      try {
+        const tx = await contract.decrementCounter();
+        await tx.wait();
+        fetchCounter();
+      } catch (error) {
+        console.error("Error decrementing counter:", error);
+      }
     }
+  };
 
-    // Check to see if user is connected. If not, connect to their account
-    if (!account) {
-      return <button onClick={connectAccount}>Please connect your Metamask wallet</button>
+  const resetCounter = async () => {
+    if (contract) {
+      try {
+        const tx = await contract.resetCounter();
+        await tx.wait();
+        fetchCounter();
+      } catch (error) {
+        console.error("Error resetting counter:", error);
+      }
     }
+  };
 
-    if (balance == undefined) {
-      getBalance();
+  const updateMessage = async () => {
+    if (contract) {
+      try {
+        const tx = await contract.setMessage(newMessage);
+        await tx.wait();
+        fetchMessage();
+      } catch (error) {
+        console.error("Error updating message:", error);
+      }
     }
+  };
 
-    return (
-      <div>
-        <p>Your Account: {account}</p>
-        <p>Your Balance: {balance}</p>
-        <button onClick={deposit}>Deposit 1 ETH</button>
-        <button onClick={withdraw}>Withdraw 1 ETH</button>
-      </div>
-    )
-  }
+  useEffect(() => {
+    getWallet();
+  }, []);
 
-  useEffect(() => {getWallet();}, []);
+  useEffect(() => {
+    if (contract) {
+      fetchCounter();
+      fetchMessage();
+    }
+  }, [contract]);
 
   return (
     <main className="container">
-      <header><h1>Welcome to the Metacrafters ATM!</h1></header>
-      {initUser()}
+      <header><h1>Simple Contract Interaction</h1></header>
+      {account ? (
+        <div>
+          <p>Your Account: {account}</p>
+          <p>Counter: {counter !== undefined ? counter : "Loading..."}</p>
+          <p>Message: {message}</p>
+          
+          <button onClick={incrementCounter}>Increment Counter</button>
+          <button onClick={decrementCounter}>Decrement Counter</button>
+          <button onClick={resetCounter}>Reset Counter</button>
+
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Enter new message"
+          />
+          <button onClick={updateMessage}>Update Message</button>
+        </div>
+      ) : (
+        <button onClick={connectAccount}>Connect MetaMask</button>
+      )}
       <style jsx>{`
         .container {
-          text-align: center
+          text-align: center;
         }
-      `}
-      </style>
+      `}</style>
     </main>
-  )
+  );
 }

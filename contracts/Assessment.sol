@@ -1,60 +1,44 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
 
-//import "hardhat/console.sol";
+contract SimpleContract {
+    uint256 private counter;
+    string private message;
 
-contract Assessment {
-    address payable public owner;
-    uint256 public balance;
-
-    event Deposit(uint256 amount);
-    event Withdraw(uint256 amount);
-
-    constructor(uint initBalance) payable {
-        owner = payable(msg.sender);
-        balance = initBalance;
+    // Constructor to initialize the counter and message
+    constructor() {
+        counter = 0;
+        message = ""; // Initialize message to an empty string
     }
 
-    function getBalance() public view returns(uint256){
-        return balance;
+    // Get the current counter value
+    function getCounter() public view returns (uint256) {
+        return counter;
     }
 
-    function deposit(uint256 _amount) public payable {
-        uint _previousBalance = balance;
-
-        // make sure this is the owner
-        require(msg.sender == owner, "You are not the owner of this account");
-
-        // perform transaction
-        balance += _amount;
-
-        // assert transaction completed successfully
-        assert(balance == _previousBalance + _amount);
-
-        // emit the event
-        emit Deposit(_amount);
+    // Increment the counter
+    function incrementCounter() public {
+        counter += 1;
     }
 
-    // custom error
-    error InsufficientBalance(uint256 balance, uint256 withdrawAmount);
+    // Decrement the counter
+    function decrementCounter() public {
+        require(counter > 0, "Counter is already at zero.");
+        counter -= 1;
+    }
 
-    function withdraw(uint256 _withdrawAmount) public {
-        require(msg.sender == owner, "You are not the owner of this account");
-        uint _previousBalance = balance;
-        if (balance < _withdrawAmount) {
-            revert InsufficientBalance({
-                balance: balance,
-                withdrawAmount: _withdrawAmount
-            });
-        }
+    // Reset the counter to zero
+    function resetCounter() public {
+        counter = 0;
+    }
 
-        // withdraw the given amount
-        balance -= _withdrawAmount;
+    // Get the current message
+    function getMessage() public view returns (string memory) {
+        return message;
+    }
 
-        // assert the balance is correct
-        assert(balance == (_previousBalance - _withdrawAmount));
-
-        // emit the event
-        emit Withdraw(_withdrawAmount);
+    // Set a new message
+    function setMessage(string memory newMessage) public {
+        message = newMessage;
     }
 }
